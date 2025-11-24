@@ -3,7 +3,6 @@ import NetworkExtension
 import Security
 
 public class VpnPermissionPlugin: NSObject, FlutterPlugin {
-    private var pendingResult: FlutterResult?
     private var requestedProviderId: String = ""
 
     public static func register(with registrar: FlutterPluginRegistrar) {
@@ -25,24 +24,16 @@ public class VpnPermissionPlugin: NSObject, FlutterPlugin {
             checkVpnPermission(result: result)
 
         case "requestVpnPermission":
-            // CHANGED: Just check, don't create
-            guard let args = call.arguments as? [String: Any],
-                  let providerId = args["providerBundleIdentifier"] as? String else {
-                result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing providerBundleIdentifier", details: nil))
-                return
-            }
-            requestedProviderId = providerId
-            // Return false to indicate permission needs to be granted through actual VPN connection
-            checkVpnPermission(result: result)
+            // DO NOT CREATE ANY PROFILE HERE
+            // Just return false - let OpenVPN plugin handle profile creation
+            result(false)
 
         default:
             result(FlutterMethodNotImplemented)
         }
     }
 
-    // --------------------------------------------------------
-    // CHECK PERMISSION - Only checks, never creates
-    // --------------------------------------------------------
+    // ONLY CHECK - NEVER CREATE
     private func checkVpnPermission(result: @escaping FlutterResult) {
         NETunnelProviderManager.loadAllFromPreferences { managers, error in
             if let error = error {
