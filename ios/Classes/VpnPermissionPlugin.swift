@@ -25,14 +25,15 @@ public class VpnPermissionPlugin: NSObject, FlutterPlugin {
             checkVpnPermission(result: result)
 
         case "requestVpnPermission":
+            // CHANGED: Just check, don't create
             guard let args = call.arguments as? [String: Any],
                   let providerId = args["providerBundleIdentifier"] as? String else {
                 result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing providerBundleIdentifier", details: nil))
                 return
             }
             requestedProviderId = providerId
-            pendingResult = result
-            requestVpnPermission()
+            // Return false to indicate permission needs to be granted through actual VPN connection
+            checkVpnPermission(result: result)
 
         default:
             result(FlutterMethodNotImplemented)
@@ -40,7 +41,7 @@ public class VpnPermissionPlugin: NSObject, FlutterPlugin {
     }
 
     // --------------------------------------------------------
-    // CHECK PERMISSION
+    // CHECK PERMISSION - Only checks, never creates
     // --------------------------------------------------------
     private func checkVpnPermission(result: @escaping FlutterResult) {
         NETunnelProviderManager.loadAllFromPreferences { managers, error in
@@ -55,52 +56,6 @@ public class VpnPermissionPlugin: NSObject, FlutterPlugin {
             }) ?? false
 
             result(exists)
-        }
-    }
-
-    // --------------------------------------------------------
-    // REQUEST PERMISSION (NO DUPLICATE PROFILES)
-    // --------------------------------------------------------
-    private func requestVpnPermission() {
-        NETunnelProviderManager.loadAllFromPreferences { managers, error in
-            if let error = error {
-                self.pendingResult?(FlutterError(code: "LOAD_ERROR", message: error.localizedDescription, details: nil))
-                return
-            }
-
-            // If profile already exists → return success
-            if let _ = managers?.first(where: {
-                ($0.protocolConfiguration as? NETunnelProviderProtocol)?
-                    .providerBundleIdentifier == self.requestedProviderId
-            }) {
-                self.pendingResult?(true)
-                return
-            }
-
-            //Create minimal profile ONLY if none exists
-            let manager = NETunnelProviderManager()
-            let proto = NETunnelProviderProtocol()
-            proto.providerBundleIdentifier = self.requestedProviderId
-            proto.serverAddress = "127.0.0.1"
-
-            manager.protocolConfiguration = proto
-            manager.localizedDescription = "VPN"
-            manager.isEnabled = true
-
-            manager.saveToPreferences { saveError in
-                if let saveError = saveError {
-                    self.pendingResult?(FlutterError(code: "SAVE_ERROR", message: saveError.localizedDescription, details: nil))
-                    return
-                }
-
-                manager.loadFromPreferences { loadError in
-                    if let loadError = loadError {
-                        self.pendingResult?(FlutterError(code: "LOAD_ERROR", message: loadError.localizedDescription, details: nil))
-                    } else {
-                        self.pendingResult?(true)
-                    }
-                }
-            }
         }
     }
 }
