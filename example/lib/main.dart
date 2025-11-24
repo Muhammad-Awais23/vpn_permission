@@ -24,12 +24,19 @@ class MyApp extends StatelessWidget {
   }
 
   _manageVPNPermission() async {
-    bool allowed = await VpnPermission.checkPermission();
+    const providerBundleIdentifier = AppConstants.providerBundleIdentifier;
+    const groupIdentifier = AppConstants.groupIdentifier;
+    const localizationDescription = AppConstants.localizationDescription;
+
+    bool allowed = await VpnPermission.checkPermission(
+      providerBundleIdentifier: providerBundleIdentifier, // <-- required now
+    );
+
     if (!allowed) {
       bool requested = await VpnPermission.requestPermission(
-        providerBundleIdentifier: AppConstants.providerBundleIdentifier,
-        groupIdentifier: AppConstants.groupIdentifier,
-        localizedDescription: AppConstants.localizationDescription,
+        providerBundleIdentifier: providerBundleIdentifier,
+        groupIdentifier: groupIdentifier,
+        localizedDescription: localizationDescription,
       );
       if (requested) {
         debugPrint("VPN permission granted");
